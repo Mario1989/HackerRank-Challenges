@@ -1,91 +1,103 @@
-﻿#include <cmath>
+﻿/* BitArray.cpp :
+
+This source code contains the full solution for the Hackerrank practice problem here:
+
+https://www.hackerrank.com/challenges/bitset-1/problem
+
+Bit Arrays
+
+-------------------------------------------------------------------------------------------------------
+Problem that was solved is summarised below. See link for input constraints
+-------------------------------------------------------------------------------------------------------
+You are given four integers: N, S, P, Q. You will use them in order to create the sequence  with the following pseudo-code.
+
+a[0] = S (modulo 2^31)
+for i = 1 to N-1
+    a[i] = a[i-1]*P+Q (modulo 2^31)
+
+Your task is to calculate the number of distinct integers in the sequence .
+
+*/
+
+#include <cmath>
 #include <cstdio>
 #include <vector>
 #include <iostream>
 #include <algorithm>
 using namespace std;
 
-/*
-for i = 1 to N - 1
-a[i] = a[i - 1] * P + Q(modulo 2 ^ 31)
-*/
-unsigned long N, S, P, Q, mod;
-unsigned long updateFunction(unsigned long Ain)
+class BitArray
 {
-    unsigned long long Aout;
-    Aout = (unsigned long long)Ain * P;
-    Aout += Q;
-    Aout %= mod;
-    return (unsigned long)Aout;
-}
-
-class TortoiseAndHare
-{
-    vector<unsigned long> diffElements;
-    unsigned long* tort;
-    unsigned long* hare;
-
+    unsigned long N, S, P, Q, modVal;
+    vector<unsigned long> elements;
+    vector<unsigned long>::iterator tort;
+    vector<unsigned long>::iterator hare;
+    vector<unsigned long>::iterator itr;    //itr performs temp iterator actions
+    
 public:
-    void Floyds_Algorithm(long long);
+    BitArray(unsigned long N, unsigned long S, unsigned long P, unsigned long Q, unsigned long mod) : N(N), S(S), P(P), Q(Q), modVal(mod)
+    {
+        elements.push_back(S);
+    }
+    void updateFunction(int);
+    unsigned long Floyds_Algorithm(void);
 };
 
-void TortoiseAndHare::Floyds_Algorithm(long long nextDiff)
+void BitArray::updateFunction(int numOfUpdates)
 {
-    //find the pattern in the difference a[i] - a[i-1] and use this to solve the rest of N 
-
-    //call updateFunction() until a cycle is found
-
-    //get start of circle
-
-    //find length of circle
-
+    for(int i = 0; i < numOfUpdates; ++i)
+    { 
+        unsigned long Ain;
+        unsigned long Aout;
+        itr = elements.end() - 1;
+        Ain = *itr;
+        Aout = Ain * P;
+        Aout += Q;
+        Aout %= modVal;
+        elements.push_back(Aout);
+    }
 }
 
-// TODO - implemenet Floyd's and Brent's algorithms
-/*
-def floyd(f, x0) :
-    # Main phase of algorithm : finding a repetition x_i = x_2i.
-    # The hare moves twice as quickly as the tortoise and
-    # the distance between them increases by 1 at each step.
-    # Eventually they will both be inside the cycle and then,
-    # at some point, the distance between them will be
-    # divisible by the period λ.
-    tortoise = f(x0) # f(x0) is the element / node next to x0.
-    hare = f(f(x0))
-    while tortoise != hare:
-tortoise = f(tortoise)
-hare = f(f(hare))
+unsigned long BitArray::Floyds_Algorithm(void)
+{
+    int elemDistToStartLoop = 0;
+    int elemLoopLength = 0;
+    hare = elements.begin(); //after push_back as we need an element to begin with
+    tort = elements.begin();
+    do 
+    {
+        for (int i = 0; i < 2 && hare != elements.end(); i++)
+        {
+            hare++;
+        }
+        tort++;
+        if (hare == elements.end())
+        {
+            return (unsigned long)(elements.end() - elements.begin());
+        }
+    } while (*tort != *hare);
 
-# At this point the tortoise position, ν, which is also equal
-# to the distance between hare and tortoise, is divisible by
-# the period λ.So hare moving in circle one step at a time,
-#and tortoise(reset to x0) moving towards the circle, will
-# intersect at the beginning of the circle.Because the
-# distance between them is constant at 2ν, a multiple of λ,
-# they will agree as soon as the tortoise reaches index μ.
+    //get start of circle
+    tort = elements.begin();
+    while (*tort != *hare)
+    {
+        tort++;
+        elemDistToStartLoop++;
+    }
 
-# Find the position μ of first repetition.
-mu = 0
-tortoise = x0
-while tortoise != hare:
-tortoise = f(tortoise)
-hare = f(hare)   # Hare and tortoise move at same speed
-mu += 1
+    //find length of circle
+    do
+    {
+        tort++;
+        elemLoopLength++;
+    } while (*tort != *hare);
 
-# Find the length of the shortest cycle starting from x_μ
-# The hare moves one step at a time while tortoise is still.
-# lam is incremented until λ is found.
-lam = 1
-hare = f(tortoise)
-while tortoise != hare:
-hare = f(hare)
-lam += 1
-
-return lam, mu
-*/
+    return (elemDistToStartLoop + elemLoopLength);
+}
 
 int main() 
 {
+    unsigned long N, S, P, Q, mod;
     mod = 2147483648;
     cin >> N >> S >> P >> Q;
     while (N > 100000000 || S > mod || P > mod || Q > mod || N < 1)
@@ -95,31 +107,33 @@ int main()
     }
 
     std::vector<unsigned long> A;
-    std::size_t ind = 0;
+    std::size_t ind = 16;
+    std::size_t total = 0;
 
     //first element added to vector
-    A.push_back(S % mod);
+    BitArray* M = new BitArray(N, S, P, Q, mod);
 
-    //iterate through the other elements
-    //this is where floyds algorithm needs to be used for speed optimisation
-    for (ind = 0; ind < N - 1; ind++)
+    long uniqueElementsInArray = 0;    
+
+    while(total < N - 1)
     {
-        A.push_back(updateFunction(A[ind]));
-    }
+        ind = min((size_t)N - total - 1, ind);
+        total += ind;
+        M->updateFunction(ind);
+        uniqueElementsInArray = M->Floyds_Algorithm();
+        if (uniqueElementsInArray < total)
+        {
+            break;
+        }
+        ind *= 3; // double the update count for next loop iteration
+        if (uniqueElementsInArray > 10000) //bit of a hack choosing 10k - unlikely to have repeating loops after 10000 elements
+        {
+            uniqueElementsInArray = N;
+            break;
+        }
+    }   
 
-    std::sort(A.begin(), A.end());
-
-    vector<unsigned long>::iterator ptr;
-
-    long uniqueElementsInArray = 1;
-    for (ptr = A.begin() + 1; ptr < A.end(); ptr++)
-    {
-        if (*ptr != *(ptr - 1))
-            uniqueElementsInArray++;
-    }
-
+    
     cout << uniqueElementsInArray << endl;
-
     return 0;
 }
-
